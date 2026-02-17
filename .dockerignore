@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+LICENSE
+
+# OpenSpec artifacts
+openspec/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts
+scanner-webhook
+*.test
+*.out
+
+# Configuration with secrets
+config.yaml
+*.secret
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Kubernetes manifests (not needed in image)
+deployments/
+k8s/

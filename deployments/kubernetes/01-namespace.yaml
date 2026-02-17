@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webhook-scanner
+  labels:
+    app.kubernetes.io/name: registry-webhook-scanner
+    app.kubernetes.io/component: scanner

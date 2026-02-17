@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-scanner
+  namespace: webhook-scanner
+  labels:
+    app.kubernetes.io/name: registry-webhook-scanner
+    app.kubernetes.io/component: scanner
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: registry-webhook-scanner
+      app.kubernetes.io/component: scanner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: registry-webhook-scanner
+        app.kubernetes.io/component: scanner
+        app.kubernetes.io/version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: default
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: scanner
+        image: registry-webhook-scanner:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8080"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: CONFIG_FILE
+          value: "/app/config/config.yaml"
+        - name: SYSDIG_CLI_PATH
+          value: "/usr/local/bin/sysdig-cli-scanner"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: secrets
+          mountPath: /app/secrets
+          readOnly: true
+        # Liveness probe - checks if container is alive
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        # Readiness probe - checks if container is ready to serve traffic
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        # Startup probe - gives container time to start before other probes begin
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 12  # 60 seconds total
+        # Resource limits and requests
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        # Security context for container
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: config
+        configMap:
+          name: scanner-config
+      - name: secrets
+        secret:
+          secretName: scanner-secrets
+      # Termination grace period for graceful shutdown
+      terminationGracePeriodSeconds: 60
+      # Node affinity and pod anti-affinity for HA
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: registry-webhook-scanner
+              topologyKey: kubernetes.io/hostname

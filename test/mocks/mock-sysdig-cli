@@ -1,0 +1,50 @@
+#!/bin/bash
+# Mock Sysdig CLI Scanner for testing
+# Simulates the behavior of the actual Sysdig CLI
+
+set -e
+
+# Parse command line arguments
+IMAGE_REF=""
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --apiurl)
+      shift
+      shift
+      ;;
+    --json-scan-result)
+      shift
+      shift
+      ;;
+    *)
+      IMAGE_REF="$1"
+      shift
+      ;;
+  esac
+done
+
+# Check for required environment variables
+if [ -z "$SYSDIG_API_TOKEN" ]; then
+  echo "Error: SYSDIG_API_TOKEN not set" >&2
+  exit 1
+fi
+
+# Simulate scan duration
+sleep 0.5
+
+# Return mock scan results
+cat <<EOF
+{
+  "image": "$IMAGE_REF",
+  "scan_status": "completed",
+  "vulnerabilities": {
+    "critical": 2,
+    "high": 5,
+    "medium": 10,
+    "low": 15
+  },
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+
+exit 0

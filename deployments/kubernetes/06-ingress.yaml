@@ -1,0 +1,69 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webhook-scanner
+  namespace: webhook-scanner
+  labels:
+    app.kubernetes.io/name: registry-webhook-scanner
+    app.kubernetes.io/component: scanner
+  annotations:
+    # Nginx Ingress Controller annotations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+
+    # Timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+
+    # Body size limit (for webhook payloads)
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # TLS configuration
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # If using cert-manager
+
+    # Alternative: For AWS ALB Ingress Controller
+    # kubernetes.io/ingress.class: alb
+    # alb.ingress.kubernetes.io/scheme: internet-facing
+    # alb.ingress.kubernetes.io/target-type: ip
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:region:account:certificate/xxxxx
+spec:
+  ingressClassName: nginx  # or 'alb' for AWS
+  tls:
+  - hosts:
+    - webhook-scanner.example.com
+    secretName: webhook-scanner-tls
+  rules:
+  - host: webhook-scanner.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: webhook-scanner
+            port:
+              name: http
+
+---
+# Alternative: LoadBalancer Service (if not using Ingress)
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: webhook-scanner-lb
+#   namespace: webhook-scanner
+# spec:
+#   type: LoadBalancer
+#   selector:
+#     app.kubernetes.io/name: registry-webhook-scanner
+#   ports:
+#   - name: https
+#     port: 443
+#     targetPort: http
+#     protocol: TCP

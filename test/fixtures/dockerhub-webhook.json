@@ -1,0 +1,26 @@
+{
+  "push_data": {
+    "pushed_at": 1620000000,
+    "images": [],
+    "tag": "v1.0.0",
+    "pusher": "testuser"
+  },
+  "callback_url": "https://registry.hub.docker.com/u/testuser/testapp/hook/callback/",
+  "repository": {
+    "status": "Active",
+    "description": "Test application",
+    "is_trusted": false,
+    "full_description": "Test Docker Hub repository",
+    "repo_name": "testuser/testapp",
+    "repo_url": "https://hub.docker.com/r/testuser/testapp",
+    "owner": "testuser",
+    "is_official": false,
+    "is_private": false,
+    "name": "testapp",
+    "namespace": "testuser",
+    "star_count": 0,
+    "comment_count": 0,
+    "date_created": 1620000000,
+    "dockerfile": ""
+  }
+}

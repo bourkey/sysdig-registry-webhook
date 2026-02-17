@@ -1,0 +1,73 @@
+# Registry Webhook Scanner Configuration Example
+# Copy this file to config.yaml and customize for your environment
+
+server:
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s
+  max_request_size: 10485760  # 10MB in bytes
+  shutdown_timeout: 30s
+
+registries:
+  # Docker Hub configuration
+  - name: dockerhub
+    type: dockerhub
+    auth:
+      type: hmac
+      secret: ${DOCKERHUB_WEBHOOK_SECRET}  # Set via environment variable
+
+  # Harbor configuration
+  - name: harbor-prod
+    type: harbor
+    url: https://harbor.company.com
+    auth:
+      type: bearer
+      secret: ${HARBOR_WEBHOOK_TOKEN}
+    scanner:
+      timeout: 600s  # 10 minutes for large images
+      credentials:
+        username: ${HARBOR_USERNAME}
+        password: ${HARBOR_PASSWORD}
+
+  # GitLab Container Registry configuration
+  - name: gitlab-registry
+    type: gitlab
+    url: https://registry.gitlab.com
+    auth:
+      type: bearer
+      secret: ${GITLAB_WEBHOOK_TOKEN}
+    scanner:
+      timeout: 300s
+      credentials:
+        username: ${GITLAB_USERNAME}
+        password: ${GITLAB_PASSWORD}
+
+scanner:
+  # Sysdig API token (required)
+  sysdig_token: ${SYSDIG_API_TOKEN}
+
+  # Path to Sysdig CLI Scanner binary
+  cli_path: /usr/local/bin/sysdig-cli-scanner
+
+  # Default timeout for scanner invocation
+  default_timeout: 300s  # 5 minutes
+
+  # Maximum concurrent scanner processes
+  max_concurrent: 5
+
+queue:
+  # Event queue buffer size
+  buffer_size: 100
+
+  # Number of worker goroutines
+  workers: 3
+
+# Environment variables referenced above should be set:
+# - DOCKERHUB_WEBHOOK_SECRET
+# - HARBOR_WEBHOOK_TOKEN
+# - HARBOR_USERNAME
+# - HARBOR_PASSWORD
+# - GITLAB_WEBHOOK_TOKEN
+# - GITLAB_USERNAME
+# - GITLAB_PASSWORD
+# - SYSDIG_API_TOKEN
