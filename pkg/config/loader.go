@@ -54,6 +54,9 @@ func (c *Config) applyDefaults() {
 	}
 
 	// Scanner defaults
+	if c.Scanner.Type == "" {
+		c.Scanner.Type = ScannerTypeCLI
+	}
 	if c.Scanner.CLIPath == "" {
 		c.Scanner.CLIPath = "/usr/local/bin/sysdig-cli-scanner"
 	}
@@ -62,6 +65,18 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Scanner.MaxConcurrent == 0 {
 		c.Scanner.MaxConcurrent = 5
+	}
+
+	// Registry Scanner defaults
+	if c.Scanner.Type == ScannerTypeRegistry && c.Scanner.RegistryScanner != nil {
+		if c.Scanner.RegistryScanner.APIURL == "" {
+			c.Scanner.RegistryScanner.APIURL = "https://secure.sysdig.com"
+		}
+		if c.Scanner.RegistryScanner.PollInterval == "" {
+			c.Scanner.RegistryScanner.PollInterval = "5s"
+		}
+		// VerifyTLS defaults to true (zero value for bool is false, so we check if it was set)
+		// Note: This is implicitly true unless explicitly set to false
 	}
 
 	// Queue defaults
@@ -102,6 +117,26 @@ func (c *Config) Validate() error {
 	// Validate scanner config
 	if c.Scanner.SysdigToken == "" {
 		return fmt.Errorf("scanner.sysdig_token is required")
+	}
+
+	// Validate scanner type
+	if c.Scanner.Type != ScannerTypeCLI && c.Scanner.Type != ScannerTypeRegistry {
+		return fmt.Errorf("scanner.type must be 'cli' or 'registry', got: %s", c.Scanner.Type)
+	}
+
+	// Validate Registry Scanner config if type is registry
+	if c.Scanner.Type == ScannerTypeRegistry {
+		if c.Scanner.RegistryScanner == nil {
+			return fmt.Errorf("scanner.registry_scanner configuration is required when scanner.type is 'registry'")
+		}
+		if c.Scanner.RegistryScanner.ProjectID == "" {
+			return fmt.Errorf("scanner.registry_scanner.project_id is required when scanner.type is 'registry'")
+		}
+		if c.Scanner.RegistryScanner.PollInterval != "" {
+			if _, err := c.ParseDuration(c.Scanner.RegistryScanner.PollInterval); err != nil {
+				return fmt.Errorf("invalid scanner.registry_scanner.poll_interval: %w", err)
+			}
+		}
 	}
 
 	// Validate duration strings

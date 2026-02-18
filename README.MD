@@ -12,7 +12,8 @@ Registry Webhook Scanner is a standalone service that bridges container registry
 **Key Features:**
 - 🔔 Receives webhooks from multiple container registry providers
 - 🔐 Authenticates webhooks using HMAC signatures or bearer tokens
-- 🔍 Automatically triggers Sysdig CLI Scanner for pushed images
+- 🔍 Automatically triggers Sysdig CLI Scanner or Registry Scanner for pushed images
+- 🚀 Choice between CLI Scanner (local) or Registry Scanner (API-based) scanning backends
 - ⚡ Concurrent scanning with configurable worker pools
 - 📊 Structured logging for audit trails and troubleshooting
 - 🏥 Health and readiness endpoints for Kubernetes
@@ -98,9 +99,16 @@ registries:
         password: ${HARBOR_PASSWORD}
 
 scanner:
+  type: cli  # Options: "cli" or "registry"
   sysdig_token: ${SYSDIG_API_TOKEN}
+  cli_path: /usr/local/bin/sysdig-cli-scanner
   default_timeout: 300s
   max_concurrent: 5
+  # registry_scanner:  # Use when type is "registry"
+  #   api_url: https://secure.sysdig.com
+  #   project_id: ${SYSDIG_PROJECT_ID}
+  #   verify_tls: true
+  #   poll_interval: 5s
 
 queue:
   buffer_size: 100

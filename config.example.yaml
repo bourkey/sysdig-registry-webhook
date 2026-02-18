@@ -29,7 +29,7 @@ registries:
         username: ${HARBOR_USERNAME}
         password: ${HARBOR_PASSWORD}
 
-  # GitLab Container Registry configuration
+  # GitLab Container Registry configuration (with Registry Scanner override)
   - name: gitlab-registry
     type: gitlab
     url: https://registry.gitlab.com
@@ -37,16 +37,22 @@ registries:
       type: bearer
       secret: ${GITLAB_WEBHOOK_TOKEN}
     scanner:
+      type: registry  # Override global scanner type for this registry
       timeout: 300s
       credentials:
         username: ${GITLAB_USERNAME}
         password: ${GITLAB_PASSWORD}
 
 scanner:
-  # Sysdig API token (required)
+  # Scanner type: "cli" (default) or "registry"
+  # - cli: Uses Sysdig CLI Scanner (downloads images locally)
+  # - registry: Uses Sysdig Registry Scanner API (scans images in registry without pulling)
+  type: cli
+
+  # Sysdig API token (required for both scanner types)
   sysdig_token: ${SYSDIG_API_TOKEN}
 
-  # Path to Sysdig CLI Scanner binary
+  # CLI Scanner specific settings (used when type=cli)
   cli_path: /usr/local/bin/sysdig-cli-scanner
 
   # Default timeout for scanner invocation
@@ -54,6 +60,14 @@ scanner:
 
   # Maximum concurrent scanner processes
   max_concurrent: 5
+
+  # Registry Scanner specific settings (required when type=registry)
+  # Uncomment and configure if using Registry Scanner
+  # registry_scanner:
+  #   api_url: https://secure.sysdig.com  # Sysdig API endpoint
+  #   project_id: ${SYSDIG_PROJECT_ID}    # Sysdig project ID (required)
+  #   verify_tls: true                     # Verify TLS certificates (default: true)
+  #   poll_interval: 5s                    # How often to poll for scan results (default: 5s)
 
 queue:
   # Event queue buffer size
@@ -71,3 +85,4 @@ queue:
 # - GITLAB_USERNAME
 # - GITLAB_PASSWORD
 # - SYSDIG_API_TOKEN
+# - SYSDIG_PROJECT_ID (required if using Registry Scanner)

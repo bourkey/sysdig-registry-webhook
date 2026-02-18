@@ -174,6 +174,142 @@ func TestValidate(t *testing.T) {
 			wantErr:     true,
 			errContains: "duplicate registry name",
 		},
+		// Registry Scanner validation tests (task 8.14)
+		{
+			name: "valid Registry Scanner config",
+			config: &Config{
+				Registries: []RegistryConfig{
+					{Name: "test", Type: "dockerhub", Auth: AuthConfig{Type: "none"}},
+				},
+				Scanner: ScannerConfig{
+					Type:           ScannerTypeRegistry,
+					SysdigToken:    "token",
+					DefaultTimeout: "300s",
+					RegistryScanner: &RegistryScannerConfig{
+						APIURL:       "https://secure.sysdig.com",
+						ProjectID:    "test-project",
+						VerifyTLS:    true,
+						PollInterval: "5s",
+					},
+				},
+				Server: ServerConfig{
+					ReadTimeout:     "30s",
+					WriteTimeout:    "30s",
+					ShutdownTimeout: "30s",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Registry Scanner missing config",
+			config: &Config{
+				Registries: []RegistryConfig{
+					{Name: "test", Type: "dockerhub", Auth: AuthConfig{Type: "none"}},
+				},
+				Scanner: ScannerConfig{
+					Type:           ScannerTypeRegistry,
+					SysdigToken:    "token",
+					DefaultTimeout: "300s",
+					// RegistryScanner nil
+				},
+				Server: ServerConfig{
+					ReadTimeout:     "30s",
+					WriteTimeout:    "30s",
+					ShutdownTimeout: "30s",
+				},
+			},
+			wantErr:     true,
+			errContains: "registry_scanner configuration is required",
+		},
+		{
+			name: "Registry Scanner missing project ID",
+			config: &Config{
+				Registries: []RegistryConfig{
+					{Name: "test", Type: "dockerhub", Auth: AuthConfig{Type: "none"}},
+				},
+				Scanner: ScannerConfig{
+					Type:           ScannerTypeRegistry,
+					SysdigToken:    "token",
+					DefaultTimeout: "300s",
+					RegistryScanner: &RegistryScannerConfig{
+						APIURL:    "https://secure.sysdig.com",
+						VerifyTLS: true,
+						// ProjectID missing
+					},
+				},
+				Server: ServerConfig{
+					ReadTimeout:     "30s",
+					WriteTimeout:    "30s",
+					ShutdownTimeout: "30s",
+				},
+			},
+			wantErr:     true,
+			errContains: "project_id is required",
+		},
+		{
+			name: "invalid scanner type",
+			config: &Config{
+				Registries: []RegistryConfig{
+					{Name: "test", Type: "dockerhub", Auth: AuthConfig{Type: "none"}},
+				},
+				Scanner: ScannerConfig{
+					Type:           ScannerType("invalid"),
+					SysdigToken:    "token",
+					DefaultTimeout: "300s",
+				},
+				Server: ServerConfig{
+					ReadTimeout:     "30s",
+					WriteTimeout:    "30s",
+					ShutdownTimeout: "30s",
+				},
+			},
+			wantErr:     true,
+			errContains: "scanner.type must be",
+		},
+		{
+			name: "Registry Scanner with invalid poll interval",
+			config: &Config{
+				Registries: []RegistryConfig{
+					{Name: "test", Type: "dockerhub", Auth: AuthConfig{Type: "none"}},
+				},
+				Scanner: ScannerConfig{
+					Type:           ScannerTypeRegistry,
+					SysdigToken:    "token",
+					DefaultTimeout: "300s",
+					RegistryScanner: &RegistryScannerConfig{
+						APIURL:       "https://secure.sysdig.com",
+						ProjectID:    "test-project",
+						PollInterval: "invalid",
+					},
+				},
+				Server: ServerConfig{
+					ReadTimeout:     "30s",
+					WriteTimeout:    "30s",
+					ShutdownTimeout: "30s",
+				},
+			},
+			wantErr:     true,
+			errContains: "invalid scanner.registry_scanner.poll_interval",
+		},
+		{
+			name: "CLI Scanner defaults to CLI type when not specified",
+			config: &Config{
+				Registries: []RegistryConfig{
+					{Name: "test", Type: "dockerhub", Auth: AuthConfig{Type: "none"}},
+				},
+				Scanner: ScannerConfig{
+					Type:           "",  // Empty - should default to CLI
+					SysdigToken:    "token",
+					DefaultTimeout: "300s",
+				},
+				Server: ServerConfig{
+					ReadTimeout:     "30s",
+					WriteTimeout:    "30s",
+					ShutdownTimeout: "30s",
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

@@ -132,20 +132,129 @@ registries:
 
 ### Scanner Configuration
 
+The scanner supports two scanning backends: **CLI Scanner** (default) and **Registry Scanner**.
+
+#### Scanner Type Selection
+
 ```yaml
 scanner:
+  type: string                # Scanner type: "cli" (default) or "registry"
   sysdig_token: string        # REQUIRED: Sysdig API token
-  cli_path: string            # Path to CLI binary
   default_timeout: duration   # Default scan timeout
   max_concurrent: int         # Max parallel scans
+
+  # CLI Scanner specific settings (used when type=cli)
+  cli_path: string            # Path to CLI binary
+
+  # Registry Scanner specific settings (required when type=registry)
+  registry_scanner:
+    api_url: string           # Sysdig API endpoint
+    project_id: string        # REQUIRED: Sysdig project ID
+    verify_tls: bool          # Verify TLS certificates (default: true)
+    poll_interval: duration   # Poll interval for scan status (default: 5s)
 ```
 
 **Defaults:**
+- `type`: `cli` (backward compatible)
 - `cli_path`: `/usr/local/bin/sysdig-cli-scanner`
 - `default_timeout`: `300s` (5 minutes)
 - `max_concurrent`: 5
+- `registry_scanner.api_url`: `https://secure.sysdig.com`
+- `registry_scanner.poll_interval`: `5s`
+- `registry_scanner.verify_tls`: `true`
 
 **Timeout Format:** Use Go duration format: `300s`, `5m`, `1h`
+
+#### Scanner Type Comparison
+
+| Feature | CLI Scanner | Registry Scanner |
+|---------|-------------|------------------|
+| **Image Download** | Yes (pulls image locally) | No (scans in registry) |
+| **Bandwidth Usage** | High (downloads full image) | Low (API calls only) |
+| **Scan Speed** | Slower for large images | Faster (parallel scanning) |
+| **Storage Required** | Yes (local image cache) | No |
+| **Best For** | On-premise, air-gapped | Cloud-native, high throughput |
+| **Requirements** | Sysdig CLI binary | Sysdig project ID |
+
+#### When to Use Each Scanner Type
+
+**Use CLI Scanner when:**
+- Running in on-premise or air-gapped environments
+- You need to scan images from registries not accessible to Sysdig
+- You have local storage and bandwidth available
+- You're already using Sysdig CLI in your workflow
+
+**Use Registry Scanner when:**
+- Running in cloud or cloud-native environments
+- Scanning many large images (reduces bandwidth)
+- Registry is accessible to Sysdig API
+- You want faster scan throughput
+- Storage is limited or expensive
+
+#### Per-Registry Scanner Override
+
+You can override the global scanner type for specific registries:
+
+```yaml
+scanner:
+  type: cli  # Global default
+
+registries:
+  - name: harbor-prod
+    type: harbor
+    scanner:
+      type: registry  # Override: use Registry Scanner for this registry
+      timeout: 600s
+```
+
+**Example: CLI Scanner Configuration**
+
+```yaml
+scanner:
+  type: cli
+  sysdig_token: ${SYSDIG_API_TOKEN}
+  cli_path: /usr/local/bin/sysdig-cli-scanner
+  default_timeout: 300s
+  max_concurrent: 5
+```
+
+**Example: Registry Scanner Configuration**
+
+```yaml
+scanner:
+  type: registry
+  sysdig_token: ${SYSDIG_API_TOKEN}
+  default_timeout: 300s
+  max_concurrent: 10  # Registry Scanner can handle more concurrent scans
+  registry_scanner:
+    api_url: https://secure.sysdig.com
+    project_id: ${SYSDIG_PROJECT_ID}
+    verify_tls: true
+    poll_interval: 5s
+```
+
+**Example: Mixed Configuration**
+
+```yaml
+scanner:
+  type: cli  # Default to CLI Scanner
+  sysdig_token: ${SYSDIG_API_TOKEN}
+  cli_path: /usr/local/bin/sysdig-cli-scanner
+  default_timeout: 300s
+  registry_scanner:  # Configure Registry Scanner for overrides
+    project_id: ${SYSDIG_PROJECT_ID}
+
+registries:
+  - name: dockerhub
+    type: dockerhub
+    # Uses CLI Scanner (global default)
+
+  - name: harbor-prod
+    type: harbor
+    scanner:
+      type: registry  # Use Registry Scanner for Harbor
+      timeout: 600s
+```
 
 ### Queue Configuration
 

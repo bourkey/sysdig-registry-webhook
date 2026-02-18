@@ -1,0 +1,25 @@
+{
+  "scan_id": "scan-abc123-20260217-001",
+  "status": "completed",
+  "completed_at": "2026-02-17T14:30:00Z",
+  "result": {
+    "image": "registry.example.com/myapp:v1.2.3",
+    "vulnerabilities": {
+      "critical": 2,
+      "high": 5,
+      "medium": 12,
+      "low": 25
+    },
+    "policy_evaluation": {
+      "passed": false,
+      "reason": "Critical vulnerabilities found"
+    },
+    "scan_duration_seconds": 45,
+    "packages_scanned": 234
+  },
+  "metadata": {
+    "scanner_version": "1.0.0",
+    "scan_type": "registry",
+    "timestamp": "2026-02-17T14:30:00Z"
+  }
+}

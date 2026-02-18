@@ -11,24 +11,30 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/sysdig/registry-webhook-scanner/internal/models"
 	"github.com/sysdig/registry-webhook-scanner/pkg/config"
+	"github.com/sysdig/registry-webhook-scanner/pkg/metrics"
 )
 
-// Scanner wraps the Sysdig CLI Scanner
-type Scanner struct {
+// CLIScanner wraps the Sysdig CLI Scanner
+type CLIScanner struct {
 	config *config.Config
 	logger *logrus.Logger
 }
 
-// NewScanner creates a new Scanner instance
-func NewScanner(cfg *config.Config, logger *logrus.Logger) *Scanner {
-	return &Scanner{
+// NewCLIScanner creates a new CLIScanner instance
+func NewCLIScanner(cfg *config.Config, logger *logrus.Logger) *CLIScanner {
+	return &CLIScanner{
 		config: cfg,
 		logger: logger,
 	}
 }
 
+// Type returns the scanner type identifier
+func (s *CLIScanner) Type() string {
+	return "cli"
+}
+
 // Scan executes the Sysdig CLI Scanner for the given image
-func (s *Scanner) Scan(ctx context.Context, req *models.ScanRequest) (*models.ScanResult, error) {
+func (s *CLIScanner) Scan(ctx context.Context, req *models.ScanRequest) (*models.ScanResult, error) {
 	startTime := time.Now()
 
 	result := &models.ScanResult{
@@ -39,9 +45,10 @@ func (s *Scanner) Scan(ctx context.Context, req *models.ScanRequest) (*models.Sc
 	}
 
 	s.logger.WithFields(logrus.Fields{
-		"image_ref":  req.ImageRef,
-		"request_id": req.RequestID,
-	}).Info("Starting image scan")
+		"image_ref":    req.ImageRef,
+		"request_id":   req.RequestID,
+		"scanner_type": "cli",
+	}).Info("Starting CLI Scanner image scan")
 
 	// Build scanner command
 	cmd, err := s.buildCommand(ctx, req)
@@ -72,13 +79,14 @@ func (s *Scanner) Scan(ctx context.Context, req *models.ScanRequest) (*models.Sc
 		// Check if timeout
 		if ctx.Err() == context.DeadlineExceeded {
 			result.Status = models.ScanStatusTimeout
-			result.Error = "scan timeout exceeded"
+			result.Error = "CLI Scanner timeout exceeded"
 			s.logger.WithFields(logrus.Fields{
-				"image_ref":  req.ImageRef,
-				"request_id": req.RequestID,
-				"duration":   result.Duration,
-			}).Warn("Scan timeout")
-			return result, fmt.Errorf("scan timeout")
+				"image_ref":    req.ImageRef,
+				"request_id":   req.RequestID,
+				"duration":     result.Duration,
+				"scanner_type": "cli",
+			}).Warn("CLI Scanner timeout")
+			return result, fmt.Errorf("CLI Scanner timeout")
 		}
 
 		// Check if exit code indicates vulnerabilities found (not an error)
@@ -86,11 +94,18 @@ func (s *Scanner) Scan(ctx context.Context, req *models.ScanRequest) (*models.Sc
 			// Sysdig CLI returns non-zero for vulnerabilities, but scan succeeded
 			result.Status = models.ScanStatusSuccess
 			s.logger.WithFields(logrus.Fields{
-				"image_ref":  req.ImageRef,
-				"request_id": req.RequestID,
-				"exit_code":  result.ExitCode,
-				"duration":   result.Duration,
-			}).Info("Scan completed with vulnerabilities found")
+				"image_ref":    req.ImageRef,
+				"request_id":   req.RequestID,
+				"exit_code":    result.ExitCode,
+				"duration":     result.Duration,
+				"scanner_type": "cli",
+			}).Info("CLI Scanner completed with vulnerabilities found")
+
+			// Record metrics
+			metrics.RecordScannerType("cli", "success")
+			metrics.RecordScanDuration("cli", "success", result.Duration.Seconds())
+			metrics.RecordScan("cli", req.RegistryName, "success")
+
 			return result, nil
 		}
 
@@ -98,11 +113,18 @@ func (s *Scanner) Scan(ctx context.Context, req *models.ScanRequest) (*models.Sc
 		result.Status = models.ScanStatusFailed
 		result.Error = err.Error()
 		s.logger.WithFields(logrus.Fields{
-			"image_ref":  req.ImageRef,
-			"request_id": req.RequestID,
-			"error":      err.Error(),
-			"exit_code":  result.ExitCode,
-		}).Error("Scan failed")
+			"image_ref":    req.ImageRef,
+			"request_id":   req.RequestID,
+			"error":        err.Error(),
+			"exit_code":    result.ExitCode,
+			"scanner_type": "cli",
+		}).Error("CLI Scanner failed")
+
+		// Record failure metrics
+		metrics.RecordScannerType("cli", "failed")
+		metrics.RecordScanDuration("cli", "failed", result.Duration.Seconds())
+		metrics.RecordScan("cli", req.RegistryName, "failed")
+
 		return result, err
 	}
 
@@ -110,23 +132,51 @@ func (s *Scanner) Scan(ctx context.Context, req *models.ScanRequest) (*models.Sc
 	result.Status = models.ScanStatusSuccess
 	result.ExitCode = 0
 	s.logger.WithFields(logrus.Fields{
-		"image_ref":  req.ImageRef,
-		"request_id": req.RequestID,
-		"duration":   result.Duration,
-	}).Info("Scan completed successfully")
+		"image_ref":    req.ImageRef,
+		"request_id":   req.RequestID,
+		"duration":     result.Duration,
+		"scanner_type": "cli",
+	}).Info("CLI Scanner completed successfully")
+
+	// Record metrics
+	metrics.RecordScannerType("cli", "success")
+	metrics.RecordScanDuration("cli", "success", result.Duration.Seconds())
+	metrics.RecordScan("cli", req.RegistryName, "success")
 
 	return result, nil
 }
 
-// buildCommand constructs the Sysdig CLI scanner command
-func (s *Scanner) buildCommand(ctx context.Context, req *models.ScanRequest) (*exec.Cmd, error) {
+// buildScanArgs constructs the arguments for the Sysdig CLI scanner
+func (s *CLIScanner) buildScanArgs(req *models.ScanRequest) []string {
 	args := []string{
 		req.ImageRef,
 		"--apiurl", "https://secure.sysdig.com",
 	}
 
+	// Add registry credentials if configured
+	if req.RegistryName != "" {
+		for _, reg := range s.config.Registries {
+			if reg.Name == req.RegistryName {
+				if reg.Scanner.Credentials.Username != "" {
+					args = append(args, "--registry-user", reg.Scanner.Credentials.Username)
+				}
+				if reg.Scanner.Credentials.Password != "" {
+					args = append(args, "--registry-password", reg.Scanner.Credentials.Password)
+				}
+				break
+			}
+		}
+	}
+
 	// Add JSON output for easier parsing
 	args = append(args, "--json-scan-result", "/dev/stdout")
+
+	return args
+}
+
+// buildCommand constructs the Sysdig CLI scanner command
+func (s *CLIScanner) buildCommand(ctx context.Context, req *models.ScanRequest) (*exec.Cmd, error) {
+	args := s.buildScanArgs(req)
 
 	// Create command
 	cmd := exec.CommandContext(ctx, s.config.Scanner.CLIPath, args...)
@@ -138,7 +188,7 @@ func (s *Scanner) buildCommand(ctx context.Context, req *models.ScanRequest) (*e
 }
 
 // executeWithTimeout executes the command with a timeout
-func (s *Scanner) executeWithTimeout(ctx context.Context, cmd *exec.Cmd, req *models.ScanRequest) error {
+func (s *CLIScanner) executeWithTimeout(ctx context.Context, cmd *exec.Cmd, req *models.ScanRequest) error {
 	// Get timeout from config
 	timeout, err := s.getTimeout(req)
 	if err != nil {
@@ -178,7 +228,7 @@ func (s *Scanner) executeWithTimeout(ctx context.Context, cmd *exec.Cmd, req *mo
 }
 
 // getTimeout returns the timeout duration for a scan request
-func (s *Scanner) getTimeout(req *models.ScanRequest) (time.Duration, error) {
+func (s *CLIScanner) getTimeout(req *models.ScanRequest) (time.Duration, error) {
 	// Check for registry-specific timeout
 	for _, reg := range s.config.Registries {
 		if reg.Name == req.RegistryName && reg.Scanner.Timeout != "" {
@@ -191,15 +241,15 @@ func (s *Scanner) getTimeout(req *models.ScanRequest) (time.Duration, error) {
 }
 
 // getExitCode extracts the exit code from an exec.ExitError
-func (s *Scanner) getExitCode(err error) int {
+func (s *CLIScanner) getExitCode(err error) int {
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		return exitErr.ExitCode()
 	}
 	return -1
 }
 
-// ValidateCLI checks if the Sysdig CLI scanner is available and executable
-func (s *Scanner) ValidateCLI() error {
+// ValidateConfig checks if the Sysdig CLI scanner is available and executable
+func (s *CLIScanner) ValidateConfig() error {
 	_, err := exec.LookPath(s.config.Scanner.CLIPath)
 	if err != nil {
 		return fmt.Errorf("Sysdig CLI scanner not found at %s: %w", s.config.Scanner.CLIPath, err)
@@ -208,7 +258,7 @@ func (s *Scanner) ValidateCLI() error {
 }
 
 // FormatImageRef ensures the image reference is in the correct format for the scanner
-func (s *Scanner) FormatImageRef(req *models.ScanRequest) string {
+func (s *CLIScanner) FormatImageRef(req *models.ScanRequest) string {
 	// If we have a digest, prefer digest-based reference
 	if req.Digest != "" {
 		if strings.Contains(req.ImageRef, "@") {

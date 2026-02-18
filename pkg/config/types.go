@@ -2,6 +2,14 @@ package config
 
 import "time"
 
+// ScannerType defines the type of scanner to use
+type ScannerType string
+
+const (
+	ScannerTypeCLI      ScannerType = "cli"
+	ScannerTypeRegistry ScannerType = "registry"
+)
+
 // Config represents the complete application configuration
 type Config struct {
 	Server     ServerConfig     `yaml:"server"`
@@ -21,11 +29,11 @@ type ServerConfig struct {
 
 // RegistryConfig defines settings for a single container registry
 type RegistryConfig struct {
-	Name    string                 `yaml:"name"`
-	Type    string                 `yaml:"type"` // dockerhub, harbor, gitlab
-	URL     string                 `yaml:"url"`
-	Auth    AuthConfig             `yaml:"auth"`
-	Scanner RegistryScannerConfig  `yaml:"scanner,omitempty"`
+	Name    string          `yaml:"name"`
+	Type    string          `yaml:"type"` // dockerhub, harbor, gitlab
+	URL     string          `yaml:"url"`
+	Auth    AuthConfig      `yaml:"auth"`
+	Scanner ScannerOverride `yaml:"scanner,omitempty"`
 }
 
 // AuthConfig defines authentication settings for webhooks
@@ -34,9 +42,10 @@ type AuthConfig struct {
 	Secret string `yaml:"secret"` // HMAC secret or bearer token
 }
 
-// RegistryScannerConfig holds registry-specific scanner settings
-type RegistryScannerConfig struct {
-	Timeout     string            `yaml:"timeout,omitempty"`
+// ScannerOverride holds registry-specific scanner settings
+type ScannerOverride struct {
+	Type        ScannerType         `yaml:"type,omitempty"`
+	Timeout     string              `yaml:"timeout,omitempty"`
 	Credentials RegistryCredentials `yaml:"credentials,omitempty"`
 }
 
@@ -46,12 +55,22 @@ type RegistryCredentials struct {
 	Password string `yaml:"password"`
 }
 
-// ScannerConfig holds Sysdig CLI scanner settings
+// ScannerConfig holds Sysdig scanner settings
 type ScannerConfig struct {
-	SysdigToken    string `yaml:"sysdig_token"`
-	CLIPath        string `yaml:"cli_path"`
-	DefaultTimeout string `yaml:"default_timeout"`
-	MaxConcurrent  int    `yaml:"max_concurrent"`
+	Type            ScannerType            `yaml:"type"`
+	SysdigToken     string                 `yaml:"sysdig_token"`
+	CLIPath         string                 `yaml:"cli_path"`
+	DefaultTimeout  string                 `yaml:"default_timeout"`
+	MaxConcurrent   int                    `yaml:"max_concurrent"`
+	RegistryScanner *RegistryScannerConfig `yaml:"registry_scanner,omitempty"`
+}
+
+// RegistryScannerConfig holds Sysdig Registry Scanner API settings
+type RegistryScannerConfig struct {
+	APIURL       string `yaml:"api_url"`
+	ProjectID    string `yaml:"project_id"`
+	VerifyTLS    bool   `yaml:"verify_tls"`
+	PollInterval string `yaml:"poll_interval"`
 }
 
 // QueueConfig holds event queue settings

@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webhook-scanner-config
+  namespace: webhook-scanner
+data:
+  config.yaml: |
+    server:
+      port: 8080
+      read_timeout: 30s
+      write_timeout: 30s
+      max_request_size: 10485760  # 10MB
+      shutdown_timeout: 30s
+    
+    registries:
+      # Docker Hub configuration
+      - name: dockerhub
+        type: dockerhub
+        auth:
+          type: hmac
+          secret: ${DOCKERHUB_WEBHOOK_SECRET}
+      
+      # Harbor configuration
+      - name: harbor-prod
+        type: harbor
+        url: https://harbor.company.com
+        auth:
+          type: bearer
+          secret: ${HARBOR_WEBHOOK_TOKEN}
+        scanner:
+          timeout: 600s
+          credentials:
+            username: ${HARBOR_USERNAME}
+            password: ${HARBOR_PASSWORD}
+      
+      # GitLab with Registry Scanner override example
+      - name: gitlab-registry
+        type: gitlab
+        url: https://registry.gitlab.com
+        auth:
+          type: bearer
+          secret: ${GITLAB_WEBHOOK_TOKEN}
+        scanner:
+          type: registry  # Use Registry Scanner for this registry
+          timeout: 300s
+    
+    scanner:
+      # Scanner type options:
+      # - "cli": Uses Sysdig CLI Scanner (downloads images locally, self-contained)
+      # - "registry": Uses Sysdig Registry Scanner API (scans without pulling, API-based)
+      type: cli  # Default scanner type (can be overridden per-registry)
+      
+      sysdig_token: ${SYSDIG_API_TOKEN}
+      cli_path: /usr/local/bin/sysdig-cli-scanner
+      default_timeout: 300s
+      max_concurrent: 5
+      
+      # Registry Scanner configuration (required when type=registry)
+      # Uncomment the following section if using Registry Scanner:
+      #
+      # registry_scanner:
+      #   api_url: https://secure.sysdig.com  # Or https://eu1.app.sysdig.com for EU
+      #   project_id: ${SYSDIG_PROJECT_ID}
+      #   verify_tls: true
+      #   poll_interval: 5s
+      #
+      # When using Registry Scanner:
+      # - No local image download required (saves storage and bandwidth)
+      # - Asynchronous API-based scanning
+      # - Requires network connectivity to Sysdig API
+      # - Scans images directly in the registry
+      #
+      # To enable Registry Scanner:
+      # 1. Set scanner.type to "registry"
+      # 2. Uncomment and configure registry_scanner section above
+      # 3. Set SYSDIG_PROJECT_ID secret/environment variable
+      # 4. Verify network connectivity to api_url
+    
+    queue:
+      buffer_size: 100
+      workers: 3
