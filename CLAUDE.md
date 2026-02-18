@@ -26,19 +26,27 @@ Registry Webhook Scanner is a standalone Go service that automatically triggers 
 - Configuration: Environment variables + YAML config files
 - Target Environment: Kubernetes (primary), Docker, or any container platform
 
+**Project Status:**
+- OpenSpec Design Phase: Complete (archived 2026-02-18)
+- Capability Specifications: Available in [openspec/specs/](openspec/specs/)
+- Implementation Phase: Ready to begin
+
 ## Project Structure
 
 ```
 .
 ├── openspec/                      # OpenSpec change management
 │   ├── config.yaml               # OpenSpec configuration
+│   ├── specs/                    # Capability specifications (ready for implementation)
+│   │   ├── webhook-receiver/     # Webhook ingestion specs
+│   │   ├── scanner-integration/  # Sysdig CLI integration specs
+│   │   └── event-processing/     # Event queue and worker pool specs
 │   └── changes/
-│       └── registry-webhook-scanner/  # Current change artifacts
-│           ├── proposal.md           # Why and what changes
-│           ├── design.md             # Architecture and decisions
-│           └── specs/                # Capability specifications
-│               ├── webhook-receiver/      # Webhook ingestion specs
-│               └── scanner-integration/   # Sysdig CLI integration specs
+│       └── archive/
+│           └── 2026-02-18-registry-webhook-scanner/  # Archived design artifacts
+│               ├── proposal.md           # Why and what changes
+│               ├── design.md             # Architecture and decisions
+│               └── specs/                # Original capability specifications
 ├── cmd/                           # Main application entry points (to be created)
 ├── internal/                      # Private application code (to be created)
 │   ├── webhook/                  # Webhook receiver implementation
@@ -76,7 +84,7 @@ Registry Webhook Scanner is a standalone Go service that automatically triggers 
 
 ### Key Design Decisions
 
-Refer to [design.md](openspec/changes/registry-webhook-scanner/design.md) for detailed architectural decisions:
+Refer to [design.md](openspec/changes/archive/2026-02-18-registry-webhook-scanner/design.md) for detailed architectural decisions:
 
 1. **HTTP Service with Internal Queue**: Standalone service with Go channels for event processing
 2. **Go Implementation**: For performance, concurrency, and containerization
@@ -143,7 +151,7 @@ type ImageEvent struct {
 }
 ```
 
-Supported registries (see [specs](openspec/changes/registry-webhook-scanner/specs/)):
+Supported registries (see [webhook-receiver spec](openspec/specs/webhook-receiver/spec.md)):
 - Docker Hub
 - Harbor
 - GitLab Container Registry
@@ -276,22 +284,31 @@ kubectl apply -f deployments/k8s/ -n webhook-scanner
 
 ### OpenSpec Workflow
 
-This project uses OpenSpec for change management. Key commands:
+This project uses OpenSpec for change management. The initial design change has been completed and archived.
 
+**Completed:**
+- Initial design and specification phase (archived 2026-02-18)
+- Three capability specifications synced to main specs directory
+
+**Available Specifications:**
+- **Webhook Receiver**: [openspec/specs/webhook-receiver/spec.md](openspec/specs/webhook-receiver/spec.md)
+- **Scanner Integration**: [openspec/specs/scanner-integration/spec.md](openspec/specs/scanner-integration/spec.md)
+- **Event Processing**: [openspec/specs/event-processing/spec.md](openspec/specs/event-processing/spec.md)
+
+**Archived Design Artifacts:**
+- Proposal, design document, and original specs are available in [openspec/changes/archive/2026-02-18-registry-webhook-scanner/](openspec/changes/archive/2026-02-18-registry-webhook-scanner/)
+
+**Key OpenSpec Commands for Future Changes:**
 - **Start new change**: `/opsx:new` - Create a new change with proposal
 - **Continue change**: `/opsx:continue` - Generate next artifact (design, specs, tasks)
 - **Implement tasks**: `/opsx:apply` - Work through implementation tasks
 - **Verify change**: `/opsx:verify` - Check implementation completeness
 - **Archive change**: `/opsx:archive` - Finalize and archive the change
 
-Current change artifacts are in [openspec/changes/registry-webhook-scanner/](openspec/changes/registry-webhook-scanner/).
-
 ### Additional Resources
 
-- **OpenSpec Proposal**: [openspec/changes/registry-webhook-scanner/proposal.md](openspec/changes/registry-webhook-scanner/proposal.md)
-- **Architecture Design**: [openspec/changes/registry-webhook-scanner/design.md](openspec/changes/registry-webhook-scanner/design.md)
-- **Webhook Receiver Spec**: [openspec/changes/registry-webhook-scanner/specs/webhook-receiver/spec.md](openspec/changes/registry-webhook-scanner/specs/webhook-receiver/spec.md)
-- **Scanner Integration Spec**: [openspec/changes/registry-webhook-scanner/specs/scanner-integration/spec.md](openspec/changes/registry-webhook-scanner/specs/scanner-integration/spec.md)
+- **Architecture Design**: [openspec/changes/archive/2026-02-18-registry-webhook-scanner/design.md](openspec/changes/archive/2026-02-18-registry-webhook-scanner/design.md)
+- **Implementation Specs**: [openspec/specs/](openspec/specs/)
 - **Sysdig CLI Scanner Docs**: https://docs.sysdig.com/en/docs/sysdig-secure/scanning/
 
 ## Common Issues and Solutions
@@ -318,7 +335,7 @@ Current change artifacts are in [openspec/changes/registry-webhook-scanner/](ope
 
 ## Future Enhancements
 
-Planned improvements (see [design.md](openspec/changes/registry-webhook-scanner/design.md#migration-plan)):
+Planned improvements (see [design.md](openspec/changes/archive/2026-02-18-registry-webhook-scanner/design.md#migration-plan)):
 
 1. **Persistent Queue**: Add Redis or database-backed queue for event durability
 2. **Metrics Endpoint**: Expose Prometheus metrics for observability

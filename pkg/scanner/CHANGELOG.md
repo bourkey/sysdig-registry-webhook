@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **OpenSpec Design Phase Completed** (2026-02-18): Initial design and specification phase archived
+  - Three capability specifications synced to main specs directory:
+    - **Webhook Receiver** ([openspec/specs/webhook-receiver/](openspec/specs/webhook-receiver/)): HTTP webhook ingestion, authentication, and payload parsing
+    - **Scanner Integration** ([openspec/specs/scanner-integration/](openspec/specs/scanner-integration/)): Sysdig CLI and Registry Scanner backend integration
+    - **Event Processing** ([openspec/specs/event-processing/](openspec/specs/event-processing/)): Internal event queue and worker pool management
+  - Archived design artifacts available in [openspec/changes/archive/2026-02-18-registry-webhook-scanner/](openspec/changes/archive/2026-02-18-registry-webhook-scanner/)
+  - Project is now ready for implementation based on completed specifications
+  - Updated README.md with project status section referencing capability specifications
+  - Updated CLAUDE.md to reflect archived change location and available specs
+
 ### Added
 
 - **Registry Scanner Support**: Added Sysdig Registry Scanner API as an alternative scanning backend alongside the existing CLI Scanner

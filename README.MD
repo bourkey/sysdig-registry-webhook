@@ -569,10 +569,26 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Container registry webhook documentation and examples
 - The Go community for excellent libraries and tools
 
+## Project Status
+
+**Design Phase: Complete**
+
+The OpenSpec design and specification phase has been completed and archived. Three capability specifications are now available for implementation:
+
+- **Webhook Receiver** ([openspec/specs/webhook-receiver/](openspec/specs/webhook-receiver/)) - HTTP webhook ingestion, authentication, and payload parsing
+- **Scanner Integration** ([openspec/specs/scanner-integration/](openspec/specs/scanner-integration/)) - Sysdig CLI and Registry Scanner integration
+- **Event Processing** ([openspec/specs/event-processing/](openspec/specs/event-processing/)) - Internal event queue and worker pool management
+
+The archived design artifacts are available in [openspec/changes/archive/2026-02-18-registry-webhook-scanner/](openspec/changes/archive/2026-02-18-registry-webhook-scanner/).
+
+**Next Phase: Implementation**
+
+The project is now ready for implementation based on the completed specifications. All architectural decisions, API contracts, and integration patterns have been documented.
+
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/yourusername/registry-webhook-scanner/issues)
-- **Documentation**: [OpenSpec Design Docs](openspec/changes/registry-webhook-scanner/)
+- **Specifications**: [OpenSpec Capability Specs](openspec/specs/)
 - **Sysdig Docs**: https://docs.sysdig.com/en/docs/sysdig-secure/scanning/
 
 ---
